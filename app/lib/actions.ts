@@ -42,10 +42,16 @@ export async function createInvoice(formData: FormData) {
   // ----------⬆️ validation 끝----------
 
   // 데이터베이스에 validation한 데이터 삽입
-  await sql`
+  try {
+    await sql`
   INSERT INTO invoices (customer_id, amount, status, date)
   VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
 `;
+  } catch (error) {
+    return {
+      message: 'Database Error: Failed to Create Invoice.',
+    };
+  }
 
   // 데이터가 바뀌었기 때문에 캐시 삭제 및 서버에 새롭게 요청하기. => revalidatePath함수를 사용하면 됨
   revalidatePath('/dashboard/invoices');
@@ -66,17 +72,28 @@ export async function updateInvoice(id: string, formData: FormData) {
 
   const amountInCents = amount * 100;
 
-  await sql`
-    UPDATE invoices
-    SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
-    WHERE id = ${id}
-  `;
+  try {
+    await sql`
+        UPDATE invoices
+        SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+        WHERE id = ${id}
+      `;
+  } catch (error) {
+    return { message: 'Database Error: Failed to Update Invoice.' };
+  }
 
   revalidatePath('/dashboard/invoices');
   redirect('/dashboard/invoices');
 }
 
 export async function deleteInvoice(id: string) {
-  await sql`DELETE FROM invoices WHERE id = ${id}`;
-  revalidatePath('/dashboard/invoices');
+  throw new Error('Failed to Delete Invoice');
+
+  try {
+    await sql`DELETE FROM invoices WHERE id = ${id}`;
+    revalidatePath('/dashboard/invoices');
+    return { message: 'Deleted Invoice.' };
+  } catch (error) {
+    return { message: 'Database Error: Failed to Delete Invoice.' };
+  }
 }
